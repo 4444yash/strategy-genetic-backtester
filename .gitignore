@@ -1,0 +1,25 @@
+# Python bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environments
+.venv/
+venv/
+ENV/
+
+# Data Cache (Ignore historical data dumps)
+data/
+*.csv
+*.json
+!strategy_pool.json  # Keep strategy_pool.json if you want to ship default strategies
+
+# Output logs
+*.log
+out.txt
+output.txt
+sim_output.txt
+
+# OS metadata
+.DS_Store
+Thumbs.db

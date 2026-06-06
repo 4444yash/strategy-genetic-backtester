@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sourdough Strategy Factory | Autonomous Engine</title>
+    <!-- Chart.js and Day.js for time series -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-deep: #050507;
+            --bg-card: rgba(20, 20, 25, 0.7);
+            --accent-main: #00ffd5;
+            --accent-glow: rgba(0, 255, 213, 0.25);
+            --text-high: #f0f0f5;
+            --text-dim: #9ca3af;
+            --border: rgba(255, 255, 255, 0.08);
+            --success: #10b981;
+            --error: #ef4444;
+            --warning: #f59e0b;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Outfit', sans-serif; 
+            background: var(--bg-deep); 
+            color: var(--text-high); 
+            height: 100vh; 
+            display: flex; 
+            overflow: hidden; 
+        }
+
+        /* SIDEBAR - DISCOVERY FACTORY CONTROLS */
+        #discovery-factory {
+            width: 450px;
+            background: var(--bg-card);
+            backdrop-filter: blur(20px);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            z-index: 10;
+        }
+
+        .factory-header {
+            padding: 30px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .factory-header h1 {
+            font-size: 1.5rem;
+            letter-spacing: -0.5px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .factory-scroll {
+            flex: 1;
+            overflow-y: auto;
+            padding: 30px;
+        }
+
+        .factory-scroll::-webkit-scrollbar { width: 5px; }
+        .factory-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+
+        .factory-block {
+            margin-bottom: 40px;
+            animation: fadeIn 0.5s ease forwards;
+        }
+
+        .block-title {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: var(--text-dim);
+            margin-bottom: 20px;
+            font-weight: 700;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* AUTO BUTTON STYLING */
+        .btn-auto {
+            background: transparent;
+            border: 1px solid var(--accent-main);
+            color: var(--accent-main);
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 0.65rem;
+            cursor: pointer;
+            transition: 0.3s;
+            text-transform: uppercase;
+        }
+        .btn-auto:hover, .btn-auto.active {
+            background: var(--accent-main);
+            color: #000;
+            box-shadow: 0 0 15px var(--accent-glow);
+        }
+
+        /* SELECTION GRIDS */
+        .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+        .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+
+        .select-card {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--border);
+            padding: 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: 0.2s;
+            text-align: center;
+        }
+        .select-card:hover { background: rgba(255,255,255,0.06); border-color: #555; }
+        .select-card.active { border-color: var(--accent-main); background: rgba(0, 255, 213, 0.05); }
+        .select-card .sym { font-weight: 600; font-size: 0.9rem; }
+        .select-card .sub { font-size: 0.6rem; color: var(--text-dim); }
+
+        .feature-bubble {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--border);
+            padding: 8px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: 0.2s;
+            display: inline-block;
+            margin: 0 5px 10px 0;
+            color: var(--text-dim);
+        }
+        .feature-bubble:hover { border-color: #777; color: #fff; }
+        .feature-bubble.active { border-color: var(--accent-main); color: var(--accent-main); background: rgba(0, 255, 213, 0.1); }
+
+        /* ANALYTICS SLIDERS */
+        .slider-group { margin-bottom: 20px; }
+        .slider-group label { display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 8px; color: var(--text-dim); }
+        .slider-group input { 
+            width: 100%; 
+            -webkit-appearance: none; 
+            appearance: none; 
+            background: #222; 
+            height: 4px; 
+            border-radius: 2px; 
+        }
+        .slider-group input::-webkit-slider-thumb { 
+            -webkit-appearance: none; 
+            appearance: none; 
+            width: 14px; 
+            height: 14px; 
+            background: var(--accent-main); 
+            border-radius: 50%; 
+            cursor: pointer; 
+        }
+
+        .btn-factory-run {
+            margin: 30px;
+            background: var(--accent-main);
+            color: #000;
+            font-family: 'Outfit', sans-serif;
+            font-weight: 700;
+            padding: 18px;
+            border-radius: 12px;
+            border: none;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: 0.4s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .btn-factory-run:hover:not(:disabled) { transform: translateY(-3px); box-shadow: 0 10px 30px var(--accent-glow); }
+        .btn-factory-run:disabled { opacity: 0.3; cursor: not-allowed; }
+
+        /* MAIN ANALYTICS VIEW */
+        #factory-monitor {
+            flex: 1;
+            padding: 40px;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        .monitor-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 30px;
+        }
+
+        .card-glass {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 30px;
+            height: fit-content;
+        }
+
+        /* METRICS STRIP */
+        .metric-strip {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .metric-item {
+            background: rgba(255,255,255,0.02);
+            border: 1px solid var(--border);
+            padding: 15px;
+            border-radius: 12px;
+        }
+        .metric-item .label { font-size: 0.7rem; color: var(--text-dim); text-transform: uppercase; margin-bottom: 6px; letter-spacing: 1px; }
+        .metric-item .val { font-size: 1.4rem; font-weight: 600; color: #fff; }
+        .metric-item .val.pos { color: var(--success); }
+        .metric-item .val.neg { color: var(--error); }
+
+        /* THE CHART */
+        .chart-wrapper {
+            height: 450px;
+            margin-bottom: 30px;
+        }
+
+        /* STRATEGY CANDIDATE SELECTOR */
+        .candidate-stream {
+            display: flex;
+            gap: 15px;
+            overflow-x: auto;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        .candidate-stream::-webkit-scrollbar { height: 4px; }
+        .candidate-stream::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
+
+        .strat-card {
+            min-width: 200px;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--border);
+            padding: 15px;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: 0.2s;
+            position: relative;
+        }
+        .strat-card:hover { border-color: #555; transform: translateY(-2px); }
+        .strat-card.active { border-color: var(--accent-main); background: rgba(0, 255, 213, 0.05); }
+        .strat-card .rank { font-size: 0.7rem; color: var(--accent-main); font-weight: bold; }
+        .strat-card .sharpe { font-size: 1.1rem; font-weight: 700; margin: 4px 0; }
+        .strat-card .oos { font-size: 0.75rem; color: var(--success); }
+
+        /* TRADE LOG */
+        .log-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+        }
+        .log-table th { text-align: left; padding: 12px; border-bottom: 1px solid var(--border); color: var(--text-dim); }
+        .log-table td { padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.02); }
+        .log-table .win { color: var(--success); }
+        .log-table .loss { color: var(--error); }
+
+        /* DNA OVERVIEW */
+        .dna-grid { display: grid; grid-template-columns: 1fr; gap: 15px; }
+        .dna-row { margin-bottom: 10px; }
+        .dna-row .label { display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-dim); margin-bottom: 6px; }
+        .dna-bar-track { width: 100%; height: 6px; background: #222; border-radius: 3px; overflow: hidden; }
+        .dna-bar-fill { height: 100%; border-radius: 3px; transition: width 0.6s ease-out; }
+
+        /* PROGRESS OVERLAY */
+        #factory-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--bg-deep);
+            z-index: 100;
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 50px;
+        }
+
+        #ga-terminal {
+            width: 700px; height: 300px;
+            background: #000; padding: 20px;
+            border-radius: 12px;
+            border: 1px solid #333;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            color: #00ffaa;
+            overflow-y: auto;
+            margin-bottom: 30px;
+        }
+        .progress-hud { width: 700px; }
+        .progress-hud .stats { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 0.9rem; color: var(--accent-main); }
+        .hud-bar-track { width: 100%; height: 8px; background: #222; border-radius: 4px; overflow: hidden; }
+        .hud-bar-fill { width: 0%; height: 100%; background: var(--accent-main); border-radius: 4px; box-shadow: 0 0 20px var(--accent-glow); transition: 0.3s; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* TOOLTIP */
+        [title] { position: relative; }
+        [title]:hover::after { content: attr(title); position: absolute; bottom: 100%; left: 0; background: #333; color: #fff; padding: 5px 10px; border-radius: 4px; font-size: 0.7rem; white-space: nowrap; z-index: 1000; }
+    </style>
+</head>
+<body>
+
+    <!-- LEFT PANEL: THE CONTROLLER -->
+    <div id="discovery-factory">
+        <div class="factory-header">
+            <h1><span>🍞</span> STRATEGY FACTORY</h1>
+        </div>
+
+        <div class="factory-scroll">
+            
+            <!-- BLOCK 1: ASSET DISCOVERY -->
+            <div class="factory-block" id="block-asset">
+                <div class="block-title">
+                    ASSET UNIVERSE
+                    <button class="btn-auto" id="auto-asset" onclick="toggleAuto('asset')">✨ ALL / AUTO</button>
+                </div>
+                <div id="stock-grid" class="grid-3">
+                    <!-- Loaded via API -->
+                </div>
+            </div>
+
+            <!-- BLOCK 2: INDICATOR DISCOVERY -->
+            <div class="factory-block" id="block-features">
+                <div class="block-title">
+                    ALPHA INDICATORS
+                    <button class="btn-auto" id="auto-features" onclick="toggleAuto('features')">✨ DISCOVER ALL</button>
+                </div>
+                <div id="feature-pool">
+                    <!-- Loaded via API -->
+                </div>
+            </div>
+
+            <!-- BLOCK 3: RISK ARCHITECTURE -->
+            <div class="factory-block">
+                <div class="block-title">
+                    RISK EVOLUTION
+                    <button class="btn-auto" id="auto-risk" onclick="toggleAuto('risk')">✨ AUTO EVOLVE</button>
+                </div>
+                
+                <div class="slider-group">
+                    <label>Signal Threshold <span id="val-thresh">-1.0 to 1.0</span></label>
+                    <input type="range" id="input-thresh" min="-3" max="3" step="0.1" value="0">
+                </div>
+
+                <div class="slider-group">
+                    <label>Safety Margin (SL) <span id="val-sl">2.0</span>x ATR</label>
+                    <input type="range" id="input-sl" min="1" max="5" step="0.1" value="2.0">
+                </div>
+
+                <div class="slider-group">
+                    <label>Profit Target (TP) <span id="val-tp">2.5</span>x Risk</label>
+                    <input type="range" id="input-tp" min="1" max="10" step="0.1" value="2.5">
+                </div>
+            </div>
+
+            <!-- BLOCK 4: ENGINE TUNING -->
+            <div class="factory-block">
+                <div class="block-title">EVOLUTION ENGINE</div>
+                <div class="grid-2" style="margin-bottom: 20px;">
+                    <div class="slider-group">
+                        <label>Population <span id="val-pop">120</span></label>
+                        <input type="range" id="input-pop" min="40" max="240" step="10" value="120">
+                    </div>
+                    <div class="slider-group">
+                        <label>Generations <span id="val-gen">15</span></label>
+                        <input type="range" id="input-gen" min="5" max="50" step="1" value="15">
+                    </div>
+                </div>
+                
+                <div class="slider-group">
+                    <label>DATA GRANULARITY</label>
+                    <div style="display: flex; gap: 10px; margin-top: 10px;">
+                        <button class="btn-auto active" id="tf-1d" style="flex: 1; font-size: 0.7rem;" onclick="setTimeframe('1d')">📅 DAILY</button>
+                        <button class="btn-auto" id="tf-15m" style="flex: 1; font-size: 0.7rem;" onclick="setTimeframe('15m')">⚡ 15-MIN</button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <button class="btn-factory-run" id="btn-run" disabled onclick="initiateDiscovery()">▶ START STRATEGY DISCOVERY</button>
+    </div>
+
+    <!-- MAIN PANEL: MONITORING & RESULTS -->
+    <div id="factory-monitor">
+        
+        <!-- DISCOVERY LOADING OVERLAY -->
+        <div id="factory-overlay">
+            <h2 style="font-size: 2rem; margin-bottom: 30px; letter-spacing: -1px;">EVOLVING STRATEGIES...</h2>
+            <div id="ga-terminal"></div>
+            <div class="progress-hud">
+                <div class="stats">
+                    <span id="progress-gen">Generation 0/15</span>
+                    <span id="progress-fitness">Best Fitness: 0.00</span>
+                </div>
+                <div class="hud-bar-track"><div class="hud-bar-fill" id="progress-bar"></div></div>
+            </div>
+            <button style="margin-top: 40px; background: #222; color: #777; border: 1px solid #444; padding: 12px 24px; border-radius: 8px; cursor: pointer;" onclick="abortDiscovery()">ABORT DISCOVERY</button>
+        </div>
+
+        <!-- IDLE STATE -->
+        <div id="factory-idle" style="display: flex; height: 100%; flex-direction: column; justify-content: center; align-items: center; color: var(--text-dim);">
+            <div style="font-size: 6rem; opacity: 0.05; margin-bottom: 20px;">⚡</div>
+            <h2 style="font-size: 1.5rem; color: #fff; margin-bottom: 10px;">Factory Offline</h2>
+            <p style="opacity: 0.6;">Configure the discovery universe on the left to begin evolution.</p>
+        </div>
+
+        <!-- ANALYTICS DASHBOARD -->
+        <div id="factory-analytics" style="display: none;">
+            
+            <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 25px;">
+                <h2 style="font-size: 1.8rem; letter-spacing: -1px;" id="strat-id-label">STRATEGY #1</h2>
+                <span style="color: var(--text-dim); font-size: 0.8rem; font-family: 'JetBrains Mono';" id="oos-label">OOS VALIDATION SUCCESSFUL</span>
+            </div>
+
+            <!-- Candidate Rail -->
+            <div class="candidate-stream" id="strat-rail"></div>
+
+            <div class="monitor-grid">
+                <!-- Left Main: Charts & Logs -->
+                <div style="display: flex; flex-direction: column; gap: 30px;">
+                    <div class="card-glass">
+                        <div class="metric-strip">
+                            <div class="metric-item"><div class="label">Train Return</div><div class="val" id="met-is">+0.0%</div></div>
+                            <div class="metric-item" style="border-color: var(--accent-main);"><div class="label">Test Return</div><div class="val pos" id="met-oos">+0.0%</div></div>
+                            <div class="metric-item"><div class="label">Train Win Rate</div><div class="val" id="met-is-wr">0.0%</div></div>
+                            <div class="metric-item" style="border-color: var(--accent-main);"><div class="label">Test Win Rate</div><div class="val pos" id="met-oos-wr">0.0%</div></div>
+                            <div class="metric-item"><div class="label">Sortino Ratio</div><div class="val" id="met-sortino">0.00</div></div>
+                            <div class="metric-item"><div class="label">Profit Factor</div><div class="val" id="met-pf">0.00</div></div>
+                        </div>
+                        <div class="chart-wrapper">
+                            <canvas id="equityChart"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="card-glass" style="max-height: 500px; overflow-y: auto; padding: 0;">
+                        <table class="log-table" id="trade-log">
+                            <thead>
+                                <tr><th>DATE</th><th>SIDE</th><th>TRUST</th><th>ENTRY</th><th>SL</th><th>EXIT</th><th>STOCK %</th><th>PORTFOLIO %</th><th>DURATION</th><th>EXIT REASON</th></tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Right Rail: DNA & Metrics -->
+                <div style="display: flex; flex-direction: column; gap: 30px;">
+                    <div class="card-glass">
+                        <div class="block-title" style="margin-bottom: 25px;">ALPHA DNA WEIGHTS</div>
+                        <div class="dna-grid" id="dna-bars"></div>
+                        
+                        <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid var(--border);">
+                            <div class="block-title" style="margin-bottom: 15px;">RISK PROFILE</div>
+                            <div id="risk-dna" style="font-family: 'JetBrains Mono'; font-size: 0.8rem; line-height: 1.6;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        let state = {
+            stock: null,
+            features: [],
+            lockedFeatures: [],
+            autoAsset: false,
+            autoFeatures: false,
+            autoRisk: false,
+            direction: 'LONG',
+            results: [],
+            splitDate: null,
+            timeframe: '1d'
+        };
+
+        let chart = null;
+
+        // --- Initialization ---
+        async function loadUI() {
+            // Load Stocks
+            const univRes = await fetch('/api/universe');
+            const univData = await univRes.json();
+            const grid = document.getElementById('stock-grid');
+            univData.stocks.forEach(s => {
+                const el = document.createElement('div');
+                el.className = 'select-card';
+                el.innerHTML = `<div class="sym">${s.symbol}</div><div class="sub">${s.sector}</div>`;
+                el.onclick = () => selectStock(s.symbol, el);
+                grid.appendChild(el);
+            });
+
+            // Load Features
+            const featRes = await fetch('/api/features');
+            const featData = await featRes.json();
+            const pool = document.getElementById('feature-pool');
+            Object.entries(featData.feature_groups).forEach(([group, list]) => {
+                const subtitle = document.createElement('div');
+                subtitle.style = "font-size: 0.6rem; color: #555; margin-bottom: 5px; font-weight: bold;";
+                subtitle.innerText = group.toUpperCase();
+                pool.appendChild(subtitle);
+                list.forEach(f => {
+                    const el = document.createElement('div');
+                    el.className = 'feature-bubble';
+                    el.innerText = f;
+                    el.onclick = () => toggleFeature(f, el);
+                    pool.appendChild(el);
+                });
+            });
+
+            setupSliders();
+        }
+
+        function setupSliders() {
+            const sliders = [
+                { id: 'input-thresh', display: 'val-thresh' },
+                { id: 'input-sl', display: 'val-sl' },
+                { id: 'input-tp', display: 'val-tp' },
+                { id: 'input-pop', display: 'val-pop' },
+                { id: 'input-gen', display: 'val-gen' }
+            ];
+            sliders.forEach(s => {
+                const input = document.getElementById(s.id);
+                const display = document.getElementById(s.display);
+                input.oninput = () => {
+                    display.innerText = s.id === 'input-thresh' ? input.value : input.value;
+                    if(s.id === 'input-thresh') display.innerText = input.value;
+                };
+            });
+        }
+
+        function toggleAuto(type) {
+            const btn = document.getElementById(`auto-${type}`);
+            console.log(`>> DEBUG: toggleAuto(${type}) triggered`);
+            if (type === 'asset') {
+                state.autoAsset = !state.autoAsset;
+                btn.classList.toggle('active');
+                document.querySelectorAll('.select-card').forEach(c => c.style.opacity = state.autoAsset ? '0.3' : '1');
+                document.querySelectorAll('.select-card').forEach(c => c.style.pointerEvents = state.autoAsset ? 'none' : 'auto');
+            } else if (type === 'features') {
+                state.autoFeatures = !state.autoFeatures;
+                btn.classList.toggle('active');
+                document.querySelectorAll('.feature-bubble').forEach(c => c.style.opacity = state.autoFeatures ? '0.3' : '1');
+                document.querySelectorAll('.feature-bubble').forEach(c => c.style.pointerEvents = state.autoFeatures ? 'none' : 'auto');
+            } else if (type === 'risk') {
+                state.autoRisk = !state.autoRisk;
+                btn.classList.toggle('active');
+                ['input-sl', 'input-tp'].forEach(id => {
+                    document.getElementById(id).disabled = state.autoRisk;
+                    document.getElementById(id).closest('.slider-group').style.opacity = state.autoRisk ? '0.3' : '1';
+                });
+            }
+            checkRunBtn();
+        }
+
+        function selectStock(s, el) {
+            console.log(`>> DEBUG: selectStock(${s}) triggered`);
+            state.stock = s;
+            document.querySelectorAll('.select-card').forEach(c => c.classList.remove('active'));
+            el.classList.add('active');
+            checkRunBtn();
+        }
+
+        function toggleFeature(f, el) {
+            if (state.lockedFeatures.includes(f)) {
+                state.lockedFeatures = state.lockedFeatures.filter(x => x !== f);
+                el.classList.remove('active');
+            } else {
+                state.lockedFeatures.push(f);
+                el.classList.add('active');
+            }
+            checkRunBtn();
+        }
+
+        function checkRunBtn() {
+            const canRun = (state.autoAsset || state.stock) && (state.autoFeatures || state.lockedFeatures.length > 0);
+            document.getElementById('btn-run').disabled = !canRun;
+        }
+
+        function setTimeframe(tf) {
+            state.timeframe = tf;
+            document.getElementById('tf-1d').classList.toggle('active', tf === '1d');
+            document.getElementById('tf-15m').classList.toggle('active', tf === '15m');
+        }
+
+        async function initiateDiscovery() {
+            // Check for Auto Flags
+            const selectedStock = state.autoAsset ? 'RELIANCE' : state.stock;
+            const fullFeaturePool = Object.values(document.querySelectorAll('.feature-bubble')).map(el => el.innerText);
+            
+            document.getElementById('factory-overlay').style.display = 'flex';
+            document.getElementById('ga-terminal').innerHTML = '>> ENGINE INITIALIZED\n>> ASSET POOL: ' + (state.autoAsset ? 'AUTO-EVOLVING NSE30' : selectedStock) + '\n>> CONNECTING DATA STREAM\n';
+            
+            // Build the Discovery Genome Payload
+            const payload = {
+                stock: selectedStock,
+                timeframe: state.timeframe,
+                features: { 
+                    locked: state.autoFeatures ? [] : state.lockedFeatures, 
+                    allowed_pool: state.autoFeatures ? fullFeaturePool : state.lockedFeatures 
+                },
+                exit: { 
+                    stop_loss_type: state.autoRisk ? 'AUTO' : 'ATR',
+                    sl_multiplier: parseFloat(document.getElementById('input-sl').value),
+                    take_profit_multiplier: parseFloat(document.getElementById('input-tp').value)
+                },
+                ga_params: {
+                    population_size: parseInt(document.getElementById('input-pop').value),
+                    generations: parseInt(document.getElementById('input-gen').value)
+                }
+            };
+
+            const res = await fetch('/api/run', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+            state.runId = data.run_id;
+
+            const es = new EventSource(`/api/progress/${state.runId}`);
+            es.onmessage = (e) => {
+                const msg = JSON.parse(e.data);
+                if (msg.type === 'log') {
+                    const term = document.getElementById('ga-terminal');
+                    term.innerHTML += `>> ${msg.message}\n`;
+                    term.scrollTop = term.scrollHeight;
+                } else if (msg.type === 'progress') {
+                    document.getElementById('progress-gen').innerText = `Generation ${msg.gen}/${parseInt(document.getElementById('input-gen').value)}`;
+                    document.getElementById('progress-fitness').innerText = `Best Fitness: ${msg.best}`;
+                    document.getElementById('progress-bar').style.width = ((msg.gen / parseInt(document.getElementById('input-gen').value)) * 100) + '%';
+                } else if (msg.type === 'result') {
+                    es.close();
+                    state.results = msg.payload.results;
+                    state.splitDate = msg.payload.split_date;
+                    displayResults();
+                }
+            };
+        }
+
+        function displayResults() {
+            console.log(">> DEBUG: Entering displayResults...");
+            document.getElementById('factory-overlay').style.display = 'none';
+            document.getElementById('factory-idle').style.display = 'none';
+            document.getElementById('factory-analytics').style.display = 'block';
+
+            const rail = document.getElementById('strat-rail');
+            rail.innerHTML = '';
+
+            if (!state.results || state.results.length === 0) {
+                console.warn(">> DEBUG: No results found.");
+                rail.innerHTML = '<div style="padding: 20px; color: var(--error); font-size: 0.8rem;">⚠ NO PROFITABLE STRATEGIES FOUND FOR THIS TIMEFRAME.</div>';
+                return;
+            }
+
+            state.results.forEach((res, i) => {
+                const el = document.createElement('div');
+                el.className = 'strat-card' + (i === 0 ? ' active' : '');
+                const dirColor = res.direction === 'SHORT' ? 'var(--error)' : 'var(--success)';
+                const dirLabel = res.direction === 'SHORT' ? '▼ SHORT' : '▲ LONG';
+                el.innerHTML = `<div class="rank">#${i+1} <span style="color:${dirColor};font-size:0.65rem;margin-left:4px;">${dirLabel}</span></div><div class="sharpe">Sortino: ${res.sortino}</div><div class="oos">OOS: ${res.oos_return}%</div>`;
+                el.onclick = () => selectStrategy(i, el);
+                rail.appendChild(el);
+            });
+
+            selectStrategy(0, rail.firstChild);
+        }
+
+        function selectStrategy(idx, el) {
+            document.querySelectorAll('.strat-card').forEach(c => c.classList.remove('active'));
+            el.classList.add('active');
+
+            const res = state.results[idx];
+            document.getElementById('strat-id-label').innerText = `STRATEGY CANDIDATE #${idx+1}`;
+            
+            // Metrics
+            document.getElementById('met-is').innerText = (res.is_return > 0 ? '+' : '') + res.is_return + '%';
+            document.getElementById('met-oos').innerText = (res.oos_return > 0 ? '+' : '') + res.oos_return + '%';
+            document.getElementById('met-sortino').innerText = res.sortino;
+            document.getElementById('met-pf').innerText = res.profit_factor;
+            const isWr = document.getElementById('met-is-wr');
+            const oosWr = document.getElementById('met-oos-wr');
+            isWr.innerText = (res.is_win_rate ?? 0.0) + '%';
+            oosWr.innerText = (res.oos_win_rate ?? 0.0) + '%';
+            isWr.className = 'val' + (res.is_win_rate >= 50 ? ' pos' : ' neg');
+            oosWr.className = 'val' + (res.oos_win_rate >= 50 ? ' pos' : ' neg');
+
+            // DNA
+            const dnaBox = document.getElementById('dna-bars');
+            dnaBox.innerHTML = '';
+            Object.entries(res.dna).forEach(([f, w]) => {
+                const mag = Math.min(100, Math.abs(w) * 100);
+                const row = document.createElement('div');
+                row.className = 'dna-row';
+                row.innerHTML = `
+                    <div class="label"><span>${f}</span><span>${w.toFixed(2)}</span></div>
+                    <div class="dna-bar-track"><div class="dna-bar-fill" style="width:${mag}%; background:${w > 0 ? 'var(--accent-main)' : 'var(--error)'};"></div></div>
+                `;
+                dnaBox.appendChild(row);
+            });
+
+            // Risk Profile
+            document.getElementById('risk-dna').innerHTML = `
+                ID: EX_DNA_${res.exit_dna.sl_basis.toUpperCase()}_v1<br>
+                EXIT BASIS: ${res.exit_dna.sl_basis}<br>
+                SL MULT: ${res.exit_dna.sl_mult}x ATR<br>
+                TP MULT: ${res.exit_dna.tp_mult}x RISK<br>
+                CALIBRATION: ${res.exit_dna.type}
+            `;
+
+            // Add Save Button if not present
+            const riskSection = document.getElementById('risk-dna').parentElement;
+            if (!document.getElementById('btn-save-vault')) {
+                const saveBtn = document.createElement('button');
+                saveBtn.id = 'btn-save-vault';
+                saveBtn.className = 'btn-main';
+                saveBtn.style.marginTop = '20px';
+                saveBtn.style.width = '100.0%';
+                saveBtn.innerHTML = '💾 SAVE TO VAULT';
+                saveBtn.onclick = () => saveStrategy(res);
+                riskSection.appendChild(saveBtn);
+            } else {
+                document.getElementById('btn-save-vault').onclick = () => saveStrategy(res);
+            }
+
+            // Log
+            const tbody = document.querySelector('#trade-log tbody');
+            tbody.innerHTML = '';
+            res.trade_log.forEach(t => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${t.entry_date}</td>
+                    <td style="color:${t.direction === 'LONG' ? 'var(--success)' : 'var(--error)'}; font-weight:600;">${t.direction === 'LONG' ? 'BUY' : 'SELL'}</td>
+                    <td style="opacity:0.8;">${t.trust_score ? t.trust_score.toFixed(3) : '-'}</td>
+                    <td style="font-family: 'JetBrains Mono';">${t.entry_price.toFixed(2)}</td>
+                    <td style="font-family: 'JetBrains Mono'; color: var(--error);">${t.sl_price.toFixed(2)}</td>
+                    <td style="font-family: 'JetBrains Mono';">${t.exit_price.toFixed(2)}</td>
+                    <td class="${t.pnl_pct > 0 ? 'win' : 'loss'}">${t.pnl_pct > 0 ? '+' : ''}${t.pnl_pct}%</td>
+                    <td class="${t.portfolio_impact_pct > 0 ? 'win' : 'loss'}">${t.portfolio_impact_pct > 0 ? '+' : ''}${t.portfolio_impact_pct}%</td>
+                    <td>${t.duration} bars</td>
+                    <td style="opacity:0.6;">${t.reason}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            renderChart(res);
+        }
+
+        function renderChart(res) {
+            if (chart) chart.destroy();
+            const ctx = document.getElementById('equityChart').getContext('2d');
+            
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: res.equity_curve.map(p => p.date),
+                    datasets: [{
+                        label: 'Portfolio Equity',
+                        data: res.equity_curve.map(p => p.equity),
+                        borderColor: '#00ffd5',
+                        backgroundColor: 'rgba(0, 255, 213, 0.05)',
+                        borderWidth: 2,
+                        pointRadius: 0,
+                        fill: true,
+                        tension: 0.1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#777', font: { family: 'JetBrains Mono' } } },
+                        x: { grid: { display: false }, ticks: { color: '#777', font: { family: 'JetBrains Mono' } } }
+                    }
+                },
+                plugins: [{
+                    id: 'oosMarker',
+                    afterDraw: (chart) => {
+                        if(state.splitDate) {
+                            const xAx = chart.scales.x;
+                            const yAx = chart.scales.y;
+                            const idx = chart.data.labels.indexOf(state.splitDate);
+                            if(idx !== -1) {
+                                const x = xAx.getPixelForValue(idx);
+                                const ctx = chart.ctx;
+                                ctx.save();
+                                ctx.setLineDash([5, 5]);
+                                ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+                                ctx.beginPath(); ctx.moveTo(x, yAx.top); ctx.lineTo(x, yAx.bottom); ctx.stroke();
+                                ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+                                ctx.font = '10px Outfit';
+                                ctx.fillText('LIVE TEST ZONE →', x + 10, yAx.top + 20);
+                                ctx.restore();
+                            }
+                        }
+                    }
+                }]
+            });
+        }
+
+        async function abortDiscovery() {
+            if (state.runId) await fetch(`/api/cancel/${state.runId}`, { method: 'POST' });
+            window.location.reload();
+        }
+
+        async function saveStrategy(res) {
+            const btn = document.getElementById('btn-save-vault');
+            btn.innerText = 'SAVING...';
+            btn.disabled = true;
+            
+            try {
+                const response = await fetch('/api/save', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        ...res,
+                        stock: state.autoAsset ? 'RELIANCE' : state.stock
+                    })
+                });
+                const data = await response.json();
+                if (data.status === 'success') {
+                    btn.innerText = '✅ SAVED TO POOL';
+                    btn.style.background = 'var(--accent-main)';
+                    setTimeout(() => {
+                        btn.innerText = '💾 SAVE TO VAULT';
+                        btn.disabled = false;
+                        btn.style.background = 'transparent';
+                    }, 3000);
+                } else {
+                    alert('Error saving strategy: ' + data.message);
+                    btn.innerText = '❌ ERROR';
+                    btn.disabled = false;
+                }
+            } catch (e) {
+                alert('Save failed: ' + e.message);
+                btn.innerText = '💾 SAVE TO VAULT';
+                btn.disabled = false;
+            }
+        }
+
+        loadUI();
+    </script>
+</body>
+</html>
