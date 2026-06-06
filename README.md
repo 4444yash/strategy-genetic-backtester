@@ -4,7 +4,7 @@ An institutional-grade, regime-aware Genetic Algorithm (GA) backtesting suite an
 
 ---
 
-## 🚀 Getting Started
+##  Getting Started
 
 ### Prerequisites
 Make sure you have Python 3.8+ installed on your machine.
@@ -30,7 +30,7 @@ Make sure you have Python 3.8+ installed on your machine.
 
 ---
 
-## 📁 Project Structure & File Guide
+##  Project Structure & File Guide
 
 Here is a breakdown of what each of the core files in the project does:
 
@@ -64,7 +64,7 @@ Here is a breakdown of what each of the core files in the project does:
 
 ---
 
-## 📈 System Features
+##  System Features
 * **Dual-Key ML Backbone**: Combines RandomForest Classifiers for signal verification with heuristic technical rules.
 * **Anti-Overfitting Fitness**: Penalizes overtrading, segment returns inconsistency, and unrealistic spikes in profit factor.
 * **Institutional Execution**: Built-in 1% risk rule, trailing stop losses, time-based exits, and regime-based filters.
